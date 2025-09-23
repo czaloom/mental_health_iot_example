@@ -121,7 +121,7 @@ def scan_csv(
     model: MentalHealthPredictor,
 ) -> tuple[int, int]:
     """
-    Stream a CSV file into PostgreSQL.
+    Stream a CSV file into DBQL.
 
     Parameters
     ----------
@@ -236,11 +236,11 @@ def lambda_handler(event, context):
         model = MentalHealthPredictor(params.model_params)
 
         with psycopg2.connect(
-            host=os.environ["POSTGRES_HOST"],
-            database=os.environ["POSTGRES_DB"],
-            user=os.environ["POSTGRES_USER"],
-            password=os.environ["POSTGRES_PASSWORD"],
-            port=os.environ.get("POSTGRES_PORT", "5432"),
+            host=os.environ["DB_HOST"],
+            database=os.environ["DB_NAME"],
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            port=os.environ.get("DB_PORT", "5432"),
         ) as conn:
             count_all, count_high_stress = scan_csv(
                 conn=conn,

@@ -31,24 +31,24 @@ build:
 run-local:
 	sam local start-api --env-vars $(ENV_FILE)
 
-.PHONY: pg-start
-pg-up:
+.PHONY: db-up
+db-up:
 	@if docker ps -a --format '{{.Names}}' | grep -q '^$(DB_CONTAINER)$$'; then \
 		docker start $(DB_CONTAINER); \
 	else \
 		docker run -d --name $(DB_CONTAINER) -p $(DB_PORT):5432 -e POSTGRES_PASSWORD=$(DB_PASSWORD) -e POSTGRES_DB=$(DB_NAME) $(DB_IMAGE); \
 	fi
 
-.PHONY: pg-init
-pg-init:
+.PHONY: db-init
+db-init:
 	PGPASSWORD=$(DB_PASSWORD) psql -h localhost -p $(DB_PORT) -U $(DB_USER) -d $(DB_NAME) -f db/init.sql
 
-.PHONY: pg-down
-pg-down:
+.PHONY: db-down
+db-down:
 	- docker stop $(DB_CONTAINER)
 
-.PHONY: pg-reset
-pg-reset:
+.PHONY: db-reset
+db-reset:
 	- docker rm -f $(DB_CONTAINER)
 
 .PHONY: psql
@@ -71,16 +71,16 @@ curl-post-alerts:
 
 .PHONY: test-agent
 test-agent:
-	POSTGRES_HOST=localhost \
-	POSTGRES_DB=$(DB_NAME) \
-	POSTGRES_USER=$(DB_USER) \
-	POSTGRES_PASSWORD=$(DB_PASSWORD) \
+	DB_HOST=localhost \
+	DB_NAME=$(DB_NAME) \
+	DB_USER=$(DB_USER) \
+	DB_PASSWORD=$(DB_PASSWORD) \
 	python py-lambda/agent.py
 
 .PHONY: test-alerts
 test-alerts:
-	POSTGRES_HOST=localhost \
-	POSTGRES_DB=$(DB_NAME) \
-	POSTGRES_USER=$(DB_USER) \
-	POSTGRES_PASSWORD=$(DB_PASSWORD) \
+	DB_HOST=localhost \
+	DB_NAME=$(DB_NAME) \
+	DB_USER=$(DB_USER) \
+	DB_PASSWORD=$(DB_PASSWORD) \
 	python py-lambda/alerts.py

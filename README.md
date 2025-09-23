@@ -13,11 +13,11 @@ Serverless sample that ingests environmental telemetry from CSV, stores high str
 1. `make install` - create the virtualenv and install dependencies.
 2. `source .venv/bin/activate` - activate virtualenv.
 3. `make build` - package the SAM application.
-4. `make pg-up` - start the PostgreSQL container (first run creates it).
-5. `make pg-init` - load the schema from `db/init.sql`.
+4. `make db-up` - start the PostgreSQL container locally (first run creates it).
+5. `make db-init` - load the schema from `db/init.sql`.
 6. `make run-local` - launch the local API using `env.local.json`.
 
-Use `make pg-down` to stop the container and `make pg-reset` to remove it when you are done.
+Use `make db-down` to stop the container and `make db-reset` to remove it when you are done.
 
 ## API Testing
 
@@ -34,4 +34,4 @@ Adjust the API base URL by overriding the `API_URL` variable, for example `API_U
 - `make test-agent` - runs the agent Lambda entry point using the local database.
 - `make test-alerts` - runs the alerts Lambda entry point using the local database.
 
-Ensure PostgreSQL is running (`make pg-up` and `make pg-init`) before executing either command.
+Ensure PostgreSQL is running (`make db-up` and `make db-init`) before executing either command.

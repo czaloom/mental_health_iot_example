@@ -99,11 +99,11 @@ def lambda_handler(event, context):
         params = AlertsEvent(**json.loads(event.get("body", "{}")))
 
         with psycopg2.connect(
-            host=os.environ["POSTGRES_HOST"],
-            database=os.environ["POSTGRES_DB"],
-            user=os.environ["POSTGRES_USER"],
-            password=os.environ["POSTGRES_PASSWORD"],
-            port=os.environ.get("POSTGRES_PORT", "5432"),
+            host=os.environ["DB_HOST"],
+            database=os.environ["DB_NAME"],
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            port=os.environ.get("DB_PORT", "5432"),
         ) as conn:
 
             # get records above threshold
