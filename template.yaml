@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM app with PostgreSQL & Python Lambdas.
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.11
+    Policies:
+      - AWSLambdaVPCAccessExecutionRole
+      - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Ref PostgresSecret
+    Environment:
+      Variables:
+        POSTGRES_DB: "records"
+        POSTGRES_USER: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:username}}']]
+        POSTGRES_PASSWORD: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:password}}']]
+        POSTGRES_HOST: !GetAtt PostgresDB.Endpoint.Address
+        POSTGRES_PORT: !GetAtt PostgresDB.Endpoint.Port
+
+Resources:
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for Postgres"
+      SubnetIds:
+        - subnet-xxx
+        - subnet-yyy
+
+  ### RDS Postgresql Instance
+  PostgresDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      DBName: records
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:username}}']]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:password}}']]
+      VPCSecurityGroups:
+        - !GetAtt DBSecurityGroup.GroupId
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+
+  ### Secrets manager 
+  PostgresSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: postgres-users-secret
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"postgresadmin"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\\'
+
+  ## Security group
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access to Postgresql
+      VpcId: !Ref MyVPC
+
+  ### Python lambda for file scanning agent
+  Agent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: py-lambda/
+      Handler: agent.lambda_handler
+      Runtime: python3.11
+      Events:
+        ApiGet:
+          Type: Api
+          Properties:
+            Path: /agent
+            Method: post
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DBSecurityGroup
+        SubnetIds:
+          - subnet-xxx
+
+  ### Python lambda for reading alerts
+  Alerts:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: py-lambda/
+      Handler: alerts.lambda_handler
+      Runtime: python3.11
+      Events:
+        ApiGet:
+          Type: Api
+          Properties:
+            Path: /alerts
+            Method: post
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DBSecurityGroup
+        SubnetIds:
+          - subnet-xxx
+
+Outputs:
+  AgentApiUrl:
+    Description: "Agent API endpoint"
+    Value:
+      Fn::Sub: "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/agent"
+
+  AlertsApiUrl:
+    Description: "Alerts API endpoint"
+    Value:
+      Fn::Sub: "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/alerts"
+
+  PostgresSecretName:
+    Description: "Secrets manager entry for DB credentials."
+    Value: !Ref PostgresSecret
