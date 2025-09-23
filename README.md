@@ -1,4 +1,4 @@
-# AWS SAM High Stress Detector
+# AWS SAM Mental Health Detector
 
 Serverless sample that ingests environmental telemetry from CSV, stores high stress readings in PostgreSQL, and exposes SAM-backed APIs for the agent and alert workflows.
 

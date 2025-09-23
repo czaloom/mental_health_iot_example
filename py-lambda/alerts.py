@@ -1,6 +1,7 @@
 import os
 import json
 from enum import StrEnum
+from dataclasses import dataclass, field
 
 import psycopg2
 from psycopg2 import sql
@@ -25,7 +26,7 @@ def get_alerts(
     direction: SortDirection,
 ) -> list[dict[str, int | str]]:
     """
-    Get high stress alerts.
+    Get mental health alerts.
 
     Parameters
     ----------
@@ -44,11 +45,11 @@ def get_alerts(
     -------
     list[dict[str, int | str]]
         A list of dictionaries containing keys 'record_id', 
-        'stress_score' and 'timestamp'. 
+        'mental_health_score' and 'timestamp'. 
     """
     query = sql.SQL(
         "SELECT record_id, score, timestamp "
-        "FROM high_stress_users "
+        "FROM high_stress_alerts "
         "ORDER BY {order_by} {direction} "
         "LIMIT %s "
         "OFFSET %s"
@@ -64,21 +65,38 @@ def get_alerts(
         return [
             {
                 "record_id": row[0],
-                "stress_score": row[1],
+                "mental_health_score": row[1],
                 "timestamp": row[2].isoformat(),
             }
             for row in cur.fetchall()
         ]
+    
+
+@dataclass
+class AlertsEvent:
+    limit: int = field(default=10)
+    offset: int = field(default=0)
+    order_by: OrderBy = field(default=OrderBy.TIMESTAMP)
+    direction: SortDirection = field(default=SortDirection.DESC)
+
+    def __post_init__(self):
+        validation_errors = []
+        if not isinstance(self.limit, int):
+            validation_errors.append(f"received type '{type(self.limit)}' for 'limit' field; expected 'int'")
+        if not isinstance(self.offset, int):
+            validation_errors.append(f"received type '{type(self.offset)}' for 'offset' field; expected 'int'")
+        if not isinstance(self.order_by, (str, OrderBy)) or self.order_by not in OrderBy:
+            validation_errors.append(f"received '{self.order_by}' for 'order_by' field; expected either 'timestamp' or 'score'")
+        if not isinstance(self.direction, (str, SortDirection)) or self.direction not in SortDirection:
+            validation_errors.append(f"received '{self.direction}' for 'direction' field; expected either 'DESC' or 'ASC'")
+        if validation_errors:
+            raise ValueError(f"alerts event validation failed with: {validation_errors}")
 
 
 def lambda_handler(event, context):
     try:
         # unpack event
-        body = json.loads(event.get("body", "{}"))
-        limit = int(body.get("limit", 10))
-        offset = int(body.get("offset", 0))
-        order_by = OrderBy(body.get("order_by", OrderBy.TIMESTAMP))
-        direction = SortDirection(body.get("direction", SortDirection.DESC))
+        params = AlertsEvent(**json.loads(event.get("body", "{}")))
 
         with psycopg2.connect(
             host=os.environ["POSTGRES_HOST"],
@@ -91,10 +109,10 @@ def lambda_handler(event, context):
             # get records above threshold
             records = get_alerts(
                 conn,
-                limit=limit,
-                offset=offset,
-                order_by=order_by,
-                direction=direction,
+                limit=params.limit,
+                offset=params.offset,
+                order_by=params.order_by,
+                direction=params.direction,
             )
         
             return {

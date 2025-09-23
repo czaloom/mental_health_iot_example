@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS high_stress_users (
+CREATE TABLE IF NOT EXISTS high_stress_alerts (
   record_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   filepath TEXT NOT NULL,
   timestamp TIMESTAMPTZ NOT NULL,
@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS high_stress_users (
   score INTEGER NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_high_stress_users_score
-  ON high_stress_users (score DESC);
+CREATE INDEX IF NOT EXISTS idx_high_stress_alerts_score
+  ON high_stress_alerts (score DESC);
 
-CREATE INDEX IF NOT EXISTS idx_high_stress_users_timestamp
-  ON high_stress_users (timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_high_stress_alerts_timestamp
+  ON high_stress_alerts (timestamp DESC);

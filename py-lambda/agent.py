@@ -3,7 +3,7 @@ import csv
 import json
 import time
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import psycopg2
 from psycopg2 import sql
@@ -30,10 +30,10 @@ class Datum:
 
 @dataclass
 class ModelParameters:
-    threshold: int
+    threshold: int = field(default=60)
 
 
-class HighStressDetector:
+class MentalHealthPredictor:
 
     def __init__(
         self,
@@ -118,7 +118,7 @@ def scan_csv(
     conn: connection,
     filepath: str,
     alert_level: int,
-    model: HighStressDetector,
+    model: MentalHealthPredictor,
 ) -> tuple[int, int]:
     """
     Stream a CSV file into PostgreSQL.
@@ -131,8 +131,8 @@ def scan_csv(
         Path to a locally stored CSV file.
     alert_level : int
         Level at which to store a stress alert.
-    model : HighStressDetector
-        A stress classification model.
+    model : MentalHealthPredictor
+        A mental health prediction model.
 
     Returns
     -------
@@ -161,7 +161,7 @@ def scan_csv(
                 mental_health_status=int(row["mental_health_status"]),
             )
 
-            # stress detection logic
+            # mental health prediction logic
             t_start = time.perf_counter()
             score = model.predict(datum)
             t_end = time.perf_counter()
@@ -169,7 +169,7 @@ def scan_csv(
             cumulative_computation_time += t_computation
             log.debug(f"computation took {t_computation} seconds")
 
-            # check if stress exceeds alert level
+            # check if mental health score exceeds alert level
             if score <= alert_level:
                 continue
             
@@ -177,7 +177,7 @@ def scan_csv(
             log.info("detected high stress event")
             count_high_stress += 1
             query = sql.SQL(
-                "INSERT INTO high_stress_users ("
+                "INSERT INTO high_stress_alerts ("
                 "filepath, timestamp, location_id, temperature_celsius, humidity_percent, "
                 "air_quality_index, noise_level_db, lighting_lux, crowd_density, "
                 "stress_level, sleep_hours, mood_score, mental_health_status, score) "
@@ -205,16 +205,35 @@ def scan_csv(
     return count_all, count_high_stress
 
 
+
+@dataclass
+class AgentEvent:
+    filepath: str = field(default="university_mental_health_iot_dataset.csv")
+    alert_level: int = field(default=70)
+    model_params: ModelParameters = field(default_factory=ModelParameters)
+
+    def __post_init__(self):
+        validation_errors = []
+        if not isinstance(self.filepath, str):
+            validation_errors.append(f"received type '{type(self.filepath)}' for 'filepath' field; expected 'str'")
+        if not isinstance(self.alert_level, int):
+            validation_errors.append(f"received type '{type(self.alert_level)}' for 'alert_level' field; expected 'int'")
+        if not isinstance(self.model_params, (dict, ModelParameters)):
+            validation_errors.append(f"received '{self.model_params}' for 'model_params' field; expected either 'dict' or 'ModelParameters'")
+        if validation_errors:
+            raise ValueError(f"agent event validation failed with: {validation_errors}")
+
+        if isinstance(self.model_params, dict):
+            self.model_params = ModelParameters(**self.model_params)
+
+
 def lambda_handler(event, context):
     try:
         # unpack event
-        body = json.loads(event.get("body", "{}"))
-        filepath = body.get("filepath", "university_mental_health_iot_dataset.csv")
-        alert_level = body.get("alert_level", 70)
-        model_params = body.get("model_parameters", {"threshold": 60})
+        params = AgentEvent(**json.loads(event.get("body", "{}")))
 
         # initialize model
-        model = HighStressDetector(model_params)
+        model = MentalHealthPredictor(params.model_params)
 
         with psycopg2.connect(
             host=os.environ["POSTGRES_HOST"],
@@ -225,8 +244,8 @@ def lambda_handler(event, context):
         ) as conn:
             count_all, count_high_stress = scan_csv(
                 conn=conn,
-                filepath=filepath,
-                alert_level=alert_level,
+                filepath=params.filepath,
+                alert_level=params.alert_level,
                 model=model,
             )
             return {
