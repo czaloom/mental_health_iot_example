@@ -6,18 +6,11 @@ Globals:
   Function:
     Timeout: 10
     Runtime: python3.11
-    Policies:
-      - AWSLambdaVPCAccessExecutionRole
-      - Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Ref PostgresSecret
     Environment:
       Variables:
         POSTGRES_DB: "records"
-        POSTGRES_USER: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:username}}']]
-        POSTGRES_PASSWORD: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:password}}']]
+        POSTGRES_USER: !Sub "{{resolve:secretsmanager:${PostgresSecret}:SecretString:username}}"
+        POSTGRES_PASSWORD: !Sub "{{resolve:secretsmanager:${PostgresSecret}:SecretString:password}}"
         POSTGRES_HOST: !GetAtt PostgresDB.Endpoint.Address
         POSTGRES_PORT: !GetAtt PostgresDB.Endpoint.Port
 
@@ -39,8 +32,8 @@ Resources:
       DBInstanceClass: db.t3.micro
       AllocatedStorage: 20
       DBName: records
-      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:username}}']]
-      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref PostgresSecret, ':SecretString:password}}']]
+      MasterUsername: !Sub "{{resolve:secretsmanager:${PostgresSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${PostgresSecret}:SecretString:password}}"
       VPCSecurityGroups:
         - !GetAtt DBSecurityGroup.GroupId
       DBSubnetGroupName: !Ref DBSubnetGroup

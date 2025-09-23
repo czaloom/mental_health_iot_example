@@ -72,7 +72,7 @@ curl-post-alerts:
 .PHONY: test-agent
 test-agent:
 	POSTGRES_HOST=localhost \
-	POSTGRES_DATABASE=$(DB_NAME) \
+	POSTGRES_DB=$(DB_NAME) \
 	POSTGRES_USER=$(DB_USER) \
 	POSTGRES_PASSWORD=$(DB_PASSWORD) \
 	python py-lambda/agent.py
@@ -80,7 +80,7 @@ test-agent:
 .PHONY: test-alerts
 test-alerts:
 	POSTGRES_HOST=localhost \
-	POSTGRES_DATABASE=$(DB_NAME) \
+	POSTGRES_DB=$(DB_NAME) \
 	POSTGRES_USER=$(DB_USER) \
 	POSTGRES_PASSWORD=$(DB_PASSWORD) \
 	python py-lambda/alerts.py
