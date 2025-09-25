@@ -4,9 +4,14 @@ Serverless sample that ingests environmental telemetry from CSV, stores high str
 
 ## Prerequisites
 
-- Docker (for the local PostgreSQL container)
-- AWS SAM CLI
-- Python 3.11
+
+- [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html#install-sam-cli-instructions)
+- Docker
+- Python3.11
+- Python3.11 VirtualEnv
+    - `sudo apt install python3-venv`
+- PostgreSQL Client (psql)
+    - `sudo apt install postgresql-client`
 
 ## Quick Start (Local)
 
